@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35828.75 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ColonThreePet", "ColonThreePet.csproj", "{77FD9E6A-2755-4ADA-B94B-37E7CD6BFBEB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{77FD9E6A-2755-4ADA-B94B-37E7CD6BFBEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77FD9E6A-2755-4ADA-B94B-37E7CD6BFBEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77FD9E6A-2755-4ADA-B94B-37E7CD6BFBEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77FD9E6A-2755-4ADA-B94B-37E7CD6BFBEB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7A388754-9F57-4F65-996C-E3007950AF1C}
+	EndGlobalSection
+EndGlobal

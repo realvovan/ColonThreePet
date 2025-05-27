@@ -1,0 +1,45 @@
+﻿<Window x:Class="ColonThreePet.PetApp"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ColonThreePet"
+        mc:Ignorable="d"
+        Title=":3 Pet" Height="450" Width="673" Topmost="True" WindowStyle="None" ResizeMode="NoResize" Background="Transparent" AllowsTransparency="True" WindowState="Maximized">
+	<Canvas>
+		<Image x:Name="PetDecal" Height="90" Width="90" HorizontalAlignment="Left" VerticalAlignment="Top" Source="/assets/Images/CatIdle.png" Cursor="Hand" MouseDown="petOnMouseDown" MouseEnter="petOnMouseIn" MouseLeave="petOnMouseOut">
+			<Image.RenderTransform>
+				<TranslateTransform x:Name="PetDecalPos" X="0" Y="0"/>
+			</Image.RenderTransform>
+			<Image.LayoutTransform>
+				<TransformGroup>
+					<ScaleTransform x:Name="PetScale" ScaleX="1"/>
+					<RotateTransform x:Name="PetRotation" Angle="0"/>
+				</TransformGroup>
+			</Image.LayoutTransform>
+		</Image>
+
+		<Image x:Name="Tootie" Height="75" Width="75" HorizontalAlignment="Left" VerticalAlignment="Top" Source="/assets/Images/TootieQuiet.png" Visibility="Visible" Cursor="Hand">
+			<Image.RenderTransform>
+				<TranslateTransform X="100" Y="0"/>
+			</Image.RenderTransform>
+		</Image>
+
+		<Grid x:Name="HungerImage" Height="50" Width="103">
+			<Image Source="/assets/Images/HungerBar.png"/>
+			<Label x:Name="HungerLabel" Content="100%" FontSize="22">
+				<Label.RenderTransform>
+					<TranslateTransform X="30" Y="3"/>
+				</Label.RenderTransform>
+			</Label>
+			<Grid.RenderTransform>
+				<TranslateTransform X="200" Y="0"/>
+			</Grid.RenderTransform>
+		</Grid>
+		<Image x:Name="FoodDecal" Width="30" Height="30" Cursor="Hand" Source="/assets/Images/Food.png" MouseDown="foodOnMouseDown">
+			<Image.RenderTransform>
+				<TranslateTransform x:Name="FoodPos" X="320" Y="0"/>
+			</Image.RenderTransform>
+		</Image>
+	</Canvas>
+</Window>
