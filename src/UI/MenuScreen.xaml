@@ -1,0 +1,39 @@
+﻿<Window x:Class="ColonThreePet.MenuScreen"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ColonThreePet"
+        mc:Ignorable="d"
+        Title=":3 Pet Menu" Height="450" Width="550" ResizeMode="CanMinimize" Icon="/assets/Images/CatIdle2.png">
+	<Window.Background>
+		<ImageBrush ImageSource="/assets/Images/LoadingScreen.png"/>
+	</Window.Background>
+	<Grid>
+		<Label Content=":3 Pet" FontSize="66" FontFamily="Franklin Gothic Heavy" HorizontalContentAlignment="Center" FontWeight="Bold" Margin="0,20,0,0"/>
+		<Button x:Name="RegularLaunch" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,120,0,0" Width="100" Height="40" Background="WhiteSmoke" BorderBrush="#FF1A1DF7" Click="StartButtonClick">
+			<TextBlock Text="Start pet" TextWrapping="Wrap" TextAlignment="Center" FontSize="16" FontWeight="Bold"/>
+		</Button>
+		<StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="24 170 0 0">
+			<ToggleButton x:Name="DisableHungerBox" Width="20" Height="20" IsChecked="False">
+				<ToggleButton.Template>
+					<ControlTemplate TargetType="ToggleButton">
+						<Grid>
+							<Border x:Name="Border" Background="White" BorderBrush="#FFAB00FF" BorderThickness="1"/>
+							<Path x:Name="Checkmark" Data="M0,5 L5,10 L10,0" Stroke="Black" StrokeThickness="2" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+						</Grid>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsChecked" Value="true">
+								<Setter TargetName="Checkmark" Property="Visibility" Value="Visible"/>
+							</Trigger>
+							<Trigger Property="IsMouseOver" Value="true">
+								<Setter TargetName="Border" Property="Background" Value="#FFC4DDFF"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</ToggleButton.Template>
+			</ToggleButton>
+			<TextBlock Margin="5 0 0 0" Text="Disable hunger" FontWeight="Bold" FontSize="14"/>
+		</StackPanel>
+	</Grid>
+</Window>

@@ -36,6 +36,10 @@ public partial class PetApp : Window {
 
     public int Hunger { get; private set; } = 100;
     public PetStates State { get; private set; } = PetStates.Freefall;
+    /// <summary>
+    /// Whether the pet loses hunger
+    /// </summary>
+    public bool IsTamagotchi { get; init; }
 
     bool isMouseInPet = false;
     int gotoX = -1;
@@ -43,16 +47,22 @@ public partial class PetApp : Window {
     Stopwatch lastWalkStopwatch = new Stopwatch();
     Stopwatch lastFoodAppearStopwatch = new Stopwatch();
     Random rng = new Random();
-    Vector velocity = new Vector(0d,1d);
+    Vector velocity;
     Vector nextPosition;
     Size screenSize = getScreenSize();
-    public PetApp() {
+    public PetApp(bool isTamagotchiMode) {
         InitializeComponent();
+		//technically if you have small enough monitor he can spawn outside the screen but like who the heck has a 300p monitor lmao
+		this.PetDecalPos.Y = rng.Next(150,300);
+        this.velocity = new Vector(rng.Next(15,40),-rng.Next(10,30));
         this.nextPosition = new Vector(this.PetDecalPos.X,this.PetDecalPos.Y) + this.velocity;
         this.PetDecal.Source = AssetProvider.Images.CatIdle;
         this.HungerImage.Visibility = Visibility.Hidden;
         this.FoodDecal.Visibility = Visibility.Hidden;
+        this.SpeechBubble.Visibility = Visibility.Hidden;
+        this.IsTamagotchi = isTamagotchiMode;
 
+        //rare tootie decal
         if (rng.Next(0,100) < 94) {
             this.Tootie.Visibility = Visibility.Hidden;
         } else {
@@ -66,6 +76,11 @@ public partial class PetApp : Window {
                 this.Tootie.Source = AssetProvider.Images.TootieQuiet;
             };
         }
+        if (isTamagotchiMode) {
+            this.PetDecal.MouseEnter += petOnMouseIn;
+            this.PetDecal.MouseLeave += petOnMouseOut;
+            this.FoodDecal.MouseDown += foodOnMouseDown;
+        }
 
         var timer = new DispatcherTimer();
         timer.Interval = TimeSpan.FromSeconds(1d / 60d);
@@ -73,6 +88,8 @@ public partial class PetApp : Window {
         timer.Start();
     }
     void physicsLoop(object? sender,EventArgs args) {
+        //physics is suspended when pet is dragged by the user
+        if (this.State == PetStates.MouseDrag) return;
         //update positions
         this.PetDecalPos.X = this.nextPosition.X;
         this.PetDecalPos.Y = this.nextPosition.Y;
@@ -80,12 +97,12 @@ public partial class PetApp : Window {
         this.nextPosition.X = this.PetDecalPos.X + this.velocity.X;
         this.nextPosition.Y = this.PetDecalPos.Y + this.velocity.Y;
         if (this.State == PetStates.Idle) {
-            if (this.Hunger < 1) {
+            if (this.IsTamagotchi && this.Hunger < 1 && this.State != PetStates.Begging) {
                 this.Hunger = 0;
                 this.PetDecal.Source = AssetProvider.Images.CatStarving;
             }
             //make him go to random positions
-            if (this.Hunger > 0 && lastWalkStopwatch.Elapsed() > rng.Next(5,12)) {
+            if ((!this.IsTamagotchi || this.Hunger > 0) && lastWalkStopwatch.Elapsed() > rng.Next(5,12)) {
                 this.gotoX = rng.Next(0,(int)(this.screenSize.Width - this.PetDecal.Width));
                 this.PetDecal.Source = AssetProvider.Images.CatMoving;
                 this.PetScale.ScaleX = this.gotoX < this.nextPosition.X ? 1d : -1d;
@@ -96,7 +113,7 @@ public partial class PetApp : Window {
 			if (Math.Abs(this.nextPosition.X - this.gotoX) < 1d) {
                 //cat reached its destination
                 this.lastWalkStopwatch.Reset();
-				this.PetDecal.Source = AssetProvider.Images.CatIdle;
+                this.PetDecal.Source = this.Hunger > 0 || !this.IsTamagotchi ? AssetProvider.Images.CatIdle : AssetProvider.Images.CatStarving;
                 this.PetScale.ScaleX = 1d;
                 this.State = PetStates.Idle;
 				return;
@@ -126,7 +143,7 @@ public partial class PetApp : Window {
             if (this.velocity.X == 0d && Math.Abs(this.velocity.Y) < 0.6d) {
                 this.velocity.Y = 0d;
                 this.lastWalkStopwatch.Reset();
-                this.State = PetStates.Idle;
+                if (this.State != PetStates.Begging) this.State = PetStates.Idle;
             }
         } else if (this.nextPosition.Y < 0d) {
             //he's touching the screen top
@@ -138,7 +155,7 @@ public partial class PetApp : Window {
             if (this.State == PetStates.Freefall || this.State == PetStates.Begging) this.velocity.Y += VERTICAL_ACCELERATION;
         }
         //make food appear
-        if (this.lastFoodAppearStopwatch.Elapsed() > 10) {
+        if (this.IsTamagotchi && this.lastFoodAppearStopwatch.Elapsed() > 10) {
             this.lastFoodAppearStopwatch.Reset();
             if (this.FoodDecal.Visibility == Visibility.Hidden && rng.Next(100) < 75) {
                 this.FoodPos.X = rng.Next(0,(int)(this.screenSize.Width - this.FoodDecal.Width));
@@ -148,6 +165,7 @@ public partial class PetApp : Window {
         }
 	}
 	async void foodOnMouseDown(object sender,MouseButtonEventArgs args) {
+        if (this.State == PetStates.Begging) return;
         var clickPosOnFood = (Vector)args.GetPosition(this.FoodDecal);
         var lastState = this.State;
         this.State = PetStates.Begging;
@@ -171,12 +189,26 @@ public partial class PetApp : Window {
         this.PetDecal.Source = lastState == PetStates.Navigating ? AssetProvider.Images.CatMoving : AssetProvider.Images.CatIdle;
 	}
 	async void petOnMouseDown(object sender,MouseButtonEventArgs args) {
+        if (args.RightButton == MouseButtonState.Pressed) {
+            if (this.velocity.X != 0 || this.velocity.Y != 0) return;
+            //open a prompt to close the program
+            //simulate mouse drag to suspend physics
+            this.State = PetStates.MouseDrag;
+            this.PetDecal.Source = AssetProvider.Images.CatIdle2;
+            this.SpeechBubble.RenderTransform = new TranslateTransform(
+                //added arbitrary offsets cuz i kinda screwed up the center of the image
+                this.PetDecalPos.X - 20,
+                this.PetDecalPos.Y - this.SpeechBubble.Height + 25
+            );
+            this.SpeechBubble.Visibility = Visibility.Visible;
+            return;
+        }
         this.State = PetStates.MouseDrag;
         this.velocity = new Vector(0d,0d);
         this.isMouseInPet = false;
         this.HungerImage.Visibility = Visibility.Hidden;
         this.PetScale.ScaleX = 1d;
-		this.PetDecal.Source = this.Hunger > 0 ? AssetProvider.Images.CatIdle : AssetProvider.Images.CatStarving;
+		this.PetDecal.Source = this.Hunger > 0 || !this.IsTamagotchi ? AssetProvider.Images.CatIdle : AssetProvider.Images.CatStarving;
 		Vector oldAbsPos;
         var clickPosOnPet = (Vector)args.GetPosition(this.PetDecal);
         while (args.LeftButton == MouseButtonState.Pressed) {
@@ -202,7 +234,7 @@ public partial class PetApp : Window {
         if (!this.isMouseInPet) return;
 		this.HungerImage.Visibility = Visibility.Visible;
         while (this.isMouseInPet) {
-			this.HungerLabel.Content = $"{this.Hunger}%";
+			this.HungerLabel.Content = $"{Math.Max(0,this.Hunger)}%";
             ((TranslateTransform)this.HungerImage.RenderTransform).X = Math.Max(0,this.PetDecalPos.X - this.HungerImage.Width + 40);
 			((TranslateTransform)this.HungerImage.RenderTransform).Y = this.PetDecalPos.Y - this.HungerImage.Height + 15;
 			await Task.Delay(50);
@@ -212,10 +244,17 @@ public partial class PetApp : Window {
         this.isMouseInPet = false;
         this.HungerImage.Visibility = Visibility.Hidden;
 	}
-    public Vector GetPetVelocity() => this.velocity;
+	void quitButtonClick(object sender,RoutedEventArgs args) {
+        Application.Current.Shutdown();
+	}
+	void noQuitButtonClick(object sender,RoutedEventArgs args) {
+        this.SpeechBubble.Visibility = Visibility.Hidden;
+        this.PetDecal.Source = AssetProvider.Images.CatIdle;
+        this.State = PetStates.Idle;
+	}
+	public Vector GetPetVelocity() => this.velocity;
 	static Size getScreenSize() => new Size(SystemParameters.WorkArea.Width,SystemParameters.WorkArea.Height);
     static Vector getMousePosition() => new Vector(System.Windows.Forms.Cursor.Position.X,System.Windows.Forms.Cursor.Position.Y);
-    static double absoluteSubtract(double num1,double num2) => num1 - Math.Sign(num1) * num2;
     /// <summary>
     /// Subtracts num2 from the absolute value of num1, if abs(num1) > num2 returns clamp
     /// </summary>

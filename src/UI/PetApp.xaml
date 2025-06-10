@@ -5,9 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ColonThreePet"
         mc:Ignorable="d"
-        Title=":3 Pet" Height="450" Width="673" Topmost="True" WindowStyle="None" ResizeMode="NoResize" Background="Transparent" AllowsTransparency="True" WindowState="Maximized">
+        Title=":3 Pet" Height="450" Width="673" Topmost="True" WindowStyle="None" ResizeMode="NoResize" Background="Transparent" AllowsTransparency="True" WindowState="Maximized" Icon="/assets/Images/CatIdle2.png">
 	<Canvas>
-		<Image x:Name="PetDecal" Height="90" Width="90" HorizontalAlignment="Left" VerticalAlignment="Top" Source="/assets/Images/CatIdle.png" Cursor="Hand" MouseDown="petOnMouseDown" MouseEnter="petOnMouseIn" MouseLeave="petOnMouseOut">
+		<Image x:Name="PetDecal" Height="90" Width="90" HorizontalAlignment="Left" VerticalAlignment="Top" Source="/assets/Images/CatIdle.png" Cursor="Hand" MouseDown="petOnMouseDown">
 			<Image.RenderTransform>
 				<TranslateTransform x:Name="PetDecalPos" X="0" Y="0"/>
 			</Image.RenderTransform>
@@ -36,10 +36,22 @@
 				<TranslateTransform X="200" Y="0"/>
 			</Grid.RenderTransform>
 		</Grid>
-		<Image x:Name="FoodDecal" Width="30" Height="30" Cursor="Hand" Source="/assets/Images/Food.png" MouseDown="foodOnMouseDown">
+		<Image x:Name="FoodDecal" Width="30" Height="30" Cursor="Hand" Source="/assets/Images/Food.png">
 			<Image.RenderTransform>
 				<TranslateTransform x:Name="FoodPos" X="320" Y="0"/>
 			</Image.RenderTransform>
 		</Image>
+
+		<Grid x:Name="SpeechBubble" Height="100" Width="131">
+			<Image Source="/assets/Images/SpeechBubble.png"/>
+			<TextBlock Text="Do you really want to leave me? 🥺" Width="120" Height="40" FontSize="14" Margin="0 3 0 0" VerticalAlignment="Top" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+			<Grid Width="100" Margin="0,45,0,28">
+				<Button Content="Yes!" Width="45" Height="23" Background="#FFEDEDED" BorderBrush="Black" HorizontalAlignment="Left" Click="quitButtonClick"/>
+				<Button Content="Nuh uh" Width="45" Height="23" Background="#FFEDEDED" BorderBrush="Black" HorizontalAlignment="Right" Click="noQuitButtonClick"/>
+			</Grid>
+			<Grid.RenderTransform>
+				<TranslateTransform X="360" Y="0"/>
+			</Grid.RenderTransform>
+		</Grid>
 	</Canvas>
 </Window>

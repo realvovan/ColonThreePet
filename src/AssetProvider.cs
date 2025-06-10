@@ -11,6 +11,7 @@ static class AssetProvider {
 		public static readonly ImageSource TootieScream = getImage("TootieScream.png");
 		public static readonly ImageSource CatStarving = getImage("CatStarving.png");
 		public static readonly ImageSource CatHungry = getImage("CatHungry.png");
+		public static readonly ImageSource CatIdle2 = getImage("CatIdle2.png");
 
 		private static ImageSource getImage(string name) => new BitmapImage(new Uri("/assets/Images/" + name,UriKind.Relative));
 	}
