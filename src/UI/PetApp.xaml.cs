@@ -2,6 +2,7 @@
 using System.Windows.Threading;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Globalization;
 
 namespace ColonThreePet;
 
@@ -42,16 +43,20 @@ public partial class PetApp : Window {
     public bool IsTamagotchi { get; init; }
 
     bool isMouseInPet = false;
+    int hideSpeechBubbleAt = -1;
     int gotoX = -1;
     double floorY = getScreenSize().Height;
     Stopwatch lastWalkStopwatch = new Stopwatch();
     Stopwatch lastFoodAppearStopwatch = new Stopwatch();
     Random rng = new Random();
+    SpeechLinesParser catLines = new SpeechLinesParser("assets/SpeechLines.txt");
+    SpeechLinesParser secretLines = new SpeechLinesParser("assets/SecretLines.txt");
     Vector velocity;
     Vector nextPosition;
     Size screenSize = getScreenSize();
     public PetApp(bool isTamagotchiMode) {
         InitializeComponent();
+        AssetProvider.Audios.StartupSound.PlayFromStart();
 		//technically if you have small enough monitor he can spawn outside the screen but like who the heck has a 300p monitor lmao
 		this.PetDecalPos.Y = rng.Next(150,300);
         this.velocity = new Vector(rng.Next(15,40),-rng.Next(10,30));
@@ -82,6 +87,13 @@ public partial class PetApp : Window {
             this.FoodDecal.MouseDown += foodOnMouseDown;
         }
 
+        this.KeyDown += (sender,args) => {
+            if (args.Key == Key.OemTilde) {
+                this.PromptPetSpeech(this.secretLines.GetNextLine(),15);
+                this.lastWalkStopwatch.Reset();
+            }
+        };
+
         var timer = new DispatcherTimer();
         timer.Interval = TimeSpan.FromSeconds(1d / 60d);
         timer.Tick += physicsLoop;
@@ -96,18 +108,24 @@ public partial class PetApp : Window {
         //calculate next positions
         this.nextPosition.X = this.PetDecalPos.X + this.velocity.X;
         this.nextPosition.Y = this.PetDecalPos.Y + this.velocity.Y;
+
         if (this.State == PetStates.Idle) {
             if (this.IsTamagotchi && this.Hunger < 1 && this.State != PetStates.Begging) {
                 this.Hunger = 0;
                 this.PetDecal.Source = AssetProvider.Images.CatStarving;
             }
-            //make him go to random positions
-            if ((!this.IsTamagotchi || this.Hunger > 0) && lastWalkStopwatch.Elapsed() > rng.Next(5,12)) {
-                this.gotoX = rng.Next(0,(int)(this.screenSize.Width - this.PetDecal.Width));
-                this.PetDecal.Source = AssetProvider.Images.CatMoving;
-                this.PetScale.ScaleX = this.gotoX < this.nextPosition.X ? 1d : -1d;
-                this.Hunger -= rng.Next(2,6);
-                this.State = PetStates.Navigating;
+            //make him go to random positions or say something random (50/50)
+            if ((!this.IsTamagotchi || this.Hunger > 0) && lastWalkStopwatch.Elapsed() > rng.Next(5,9)) {
+                if (rng.NextDouble() < 0.5) {
+                    this.PromptPetSpeech(this.catLines.GetRandomLine());
+                    this.lastWalkStopwatch.Reset();
+                } else {
+                    this.gotoX = rng.Next(0,(int)(this.screenSize.Width - this.PetDecal.Width));
+                    this.PetDecal.Source = AssetProvider.Images.CatMoving;
+                    this.PetScale.ScaleX = this.gotoX < this.nextPosition.X ? 1d : -1d;
+                    this.Hunger -= rng.Next(2,6);
+                    this.State = PetStates.Navigating;
+                }
             }
         } else if (this.State == PetStates.Navigating) {
 			if (Math.Abs(this.nextPosition.X - this.gotoX) < 1d) {
@@ -164,6 +182,7 @@ public partial class PetApp : Window {
             }
         }
 	}
+	#region Event handlers
 	async void foodOnMouseDown(object sender,MouseButtonEventArgs args) {
         if (this.State == PetStates.Begging) return;
         var clickPosOnFood = (Vector)args.GetPosition(this.FoodDecal);
@@ -172,7 +191,7 @@ public partial class PetApp : Window {
         this.PetDecal.Source = AssetProvider.Images.CatHungry;
         while (args.LeftButton == MouseButtonState.Pressed) {
             Vector currentPos = new Vector(this.FoodPos.X,this.FoodPos.Y);
-            Vector nextPos = currentPos + (getMousePosition() - clickPosOnFood - currentPos) * 0.25;
+            Vector nextPos = lerp(currentPos,getMousePosition() - clickPosOnFood,0.25f);
             this.FoodPos.X = nextPos.X;
             this.FoodPos.Y = nextPos.Y;
             await Task.Delay(10);
@@ -189,18 +208,28 @@ public partial class PetApp : Window {
         this.PetDecal.Source = lastState == PetStates.Navigating ? AssetProvider.Images.CatMoving : AssetProvider.Images.CatIdle;
 	}
 	async void petOnMouseDown(object sender,MouseButtonEventArgs args) {
+        if (args.MiddleButton == MouseButtonState.Pressed) return;
         if (args.RightButton == MouseButtonState.Pressed) {
             if (this.velocity.X != 0 || this.velocity.Y != 0) return;
             //open a prompt to close the program
             //simulate mouse drag to suspend physics
             this.State = PetStates.MouseDrag;
             this.PetDecal.Source = AssetProvider.Images.CatIdle2;
-            this.SpeechBubble.RenderTransform = new TranslateTransform(
-                //added arbitrary offsets cuz i kinda screwed up the center of the image
-                this.PetDecalPos.X - 20,
-                this.PetDecalPos.Y - this.SpeechBubble.Height + 25
-            );
-            this.SpeechBubble.Visibility = Visibility.Visible;
+            this.SpeechBubbleButtons.Visibility = Visibility.Visible;
+            this.SpeechBubbleText.Text = "Do you really want to leave me? 🥺";
+            this.SpeechBubbleText.Height = 40;
+            this.SpeechBubbleText.FontSize = 14;
+            this.hideSpeechBubbleAt = Stopwatch.Now() + 15; //prompt hides away if no user interaction
+            if (this.SpeechBubble.Visibility == Visibility.Visible) return;
+			this.SpeechBubble.Visibility = Visibility.Visible;
+            while (Stopwatch.Now() < this.hideSpeechBubbleAt) {
+				//added arbitrary offsets cuz i kinda screwed up the center of the image
+				this.SpeechBubblePosition.X = lerp(this.SpeechBubblePosition.X,this.PetDecalPos.X - 20,0.4);
+				this.SpeechBubblePosition.Y = lerp(this.SpeechBubblePosition.Y,this.PetDecalPos.Y - this.SpeechBubble.Height + 25,0.4);
+				await Task.Delay(20);
+			}
+            this.SpeechBubble.Visibility = Visibility.Hidden;
+            this.State = PetStates.Freefall;
             return;
         }
         this.State = PetStates.MouseDrag;
@@ -208,13 +237,18 @@ public partial class PetApp : Window {
         this.isMouseInPet = false;
         this.HungerImage.Visibility = Visibility.Hidden;
         this.PetScale.ScaleX = 1d;
-		this.PetDecal.Source = this.Hunger > 0 || !this.IsTamagotchi ? AssetProvider.Images.CatIdle : AssetProvider.Images.CatStarving;
-		Vector oldAbsPos;
+		//this.PetDecal.Source = this.Hunger > 0 || !this.IsTamagotchi ? AssetProvider.Images.CatIdle : AssetProvider.Images.CatStarving;
+        if (this.IsTamagotchi && this.Hunger < 1) {
+            this.PetDecal.Source = AssetProvider.Images.CatStarving;
+        } else if (this.PetDecal.Source != AssetProvider.Images.CatIdle2) {
+            this.PetDecal.Source = AssetProvider.Images.CatIdle;
+		}
+        Vector oldAbsPos;
         var clickPosOnPet = (Vector)args.GetPosition(this.PetDecal);
         while (args.LeftButton == MouseButtonState.Pressed) {
             oldAbsPos = getMousePosition();
             this.PetRotation.Angle = 10 * Math.Sin(DateTimeOffset.Now.ToUnixTimeMilliseconds() * 0.004);
-            this.nextPosition = this.nextPosition + (oldAbsPos - clickPosOnPet - this.nextPosition) * 0.25; //lerping to mouse pos by 25%
+            this.nextPosition = lerp(this.nextPosition,oldAbsPos - clickPosOnPet,0.25f);
 			this.PetDecalPos.X = this.nextPosition.X;
 			this.PetDecalPos.Y = this.nextPosition.Y;
 			await Task.Delay(10);
@@ -244,17 +278,71 @@ public partial class PetApp : Window {
         this.isMouseInPet = false;
         this.HungerImage.Visibility = Visibility.Hidden;
 	}
-	void quitButtonClick(object sender,RoutedEventArgs args) {
+	async void quitButtonClick(object sender,RoutedEventArgs args) {
+        this.Visibility = Visibility.Collapsed;
+        AssetProvider.Audios.ShutdownSound.PlayFromStart();
+        await Task.Delay((int)AssetProvider.Audios.ShutdownSound.NaturalDuration.TimeSpan.TotalMilliseconds);
         Application.Current.Shutdown();
 	}
 	void noQuitButtonClick(object sender,RoutedEventArgs args) {
-        this.SpeechBubble.Visibility = Visibility.Hidden;
+        this.hideSpeechBubbleAt = -1;
         this.PetDecal.Source = AssetProvider.Images.CatIdle;
         this.State = PetStates.Idle;
+        
 	}
-	public Vector GetPetVelocity() => this.velocity;
+	#endregion
+    /// <summary>
+    /// Shows a speech bubble above the pet with given text
+    /// </summary>
+    /// <param name="showFor">For how many seconds the speech bubble will stay visible, default: 7</param>
+    public async void PromptPetSpeech(string text,int showFor = 7) {
+        if (string.IsNullOrEmpty(text)) return;
+		this.SpeechBubbleButtons.Visibility = Visibility.Hidden;
+		this.SpeechBubbleText.Height = 65;
+        this.SpeechBubbleText.Text = text;
+        //scale the text size
+        double fontSize = 64;
+        while (fontSize > 1) {
+            var typeFace = new Typeface(
+                this.SpeechBubbleText.FontFamily,
+                this.SpeechBubbleText.FontStyle,
+                this.SpeechBubbleText.FontWeight,
+                this.SpeechBubbleText.FontStretch
+            );
+            var formattedText = new FormattedText(
+                text,
+                CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                typeFace,
+                fontSize,
+                Brushes.Black,
+                new NumberSubstitution(),
+                VisualTreeHelper.GetDpi(this.SpeechBubbleText).PixelsPerDip
+            ) {
+                MaxTextWidth = this.SpeechBubbleText.ActualWidth
+            };
+            if (formattedText.Width <= this.SpeechBubbleText.Width && formattedText.Height <= this.SpeechBubbleText.Height) {
+                this.SpeechBubbleText.FontSize = fontSize;
+                break;
+            }
+            fontSize--;
+        }
+        AssetProvider.Audios.Meow.PlayFromStart();
+        this.hideSpeechBubbleAt = Stopwatch.Now() + showFor;
+        if (this.SpeechBubble.Visibility == Visibility.Visible) return;
+		this.SpeechBubble.Visibility = Visibility.Visible;
+		while (Stopwatch.Now() < this.hideSpeechBubbleAt) {
+            this.SpeechBubblePosition.X = lerp(this.SpeechBubblePosition.X,this.PetDecalPos.X - 20,0.4);
+            this.SpeechBubblePosition.Y = lerp(this.SpeechBubblePosition.Y,this.PetDecalPos.Y - this.SpeechBubble.Height + 25,0.4);
+			await Task.Delay(20);
+        }
+		this.SpeechBubble.Visibility = Visibility.Hidden;
+	}
+    public Vector GetPetVelocity() => this.velocity;
 	static Size getScreenSize() => new Size(SystemParameters.WorkArea.Width,SystemParameters.WorkArea.Height);
     static Vector getMousePosition() => new Vector(System.Windows.Forms.Cursor.Position.X,System.Windows.Forms.Cursor.Position.Y);
+    static Vector lerp(Vector start, Vector end, float alpha) => start + (end - start) * alpha;
+    static double lerp(double start,double end,double alpha) => start + (end - start) * alpha;
     /// <summary>
     /// Subtracts num2 from the absolute value of num1, if abs(num1) > num2 returns clamp
     /// </summary>

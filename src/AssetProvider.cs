@@ -18,6 +18,9 @@ static class AssetProvider {
 	public static class Audios {
 		public static readonly MediaPlayer TootieScream = getSound("TootieMeow.wav");
 		public static readonly MediaPlayer EatingSound = getSound("EatingSfx.wav");
+		public static readonly MediaPlayer Meow = getSound("Meow.wav");
+		public static readonly MediaPlayer StartupSound = getSound("Startup.wav");
+		public static readonly MediaPlayer ShutdownSound = getSound("VanishSFX.wav");
 		private static MediaPlayer getSound(string name) {
 			var player = new MediaPlayer();
 			player.Open(new Uri("assets/Sounds/" + name,UriKind.Relative));
