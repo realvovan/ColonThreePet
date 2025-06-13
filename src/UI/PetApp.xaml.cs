@@ -26,10 +26,18 @@ public enum PetStates {
     /// <summary>
     /// Pet begging for food when you're dragging some
     /// </summary>
-    Begging
+    Begging,
+    /// <summary>
+    /// Pet has not been interacted with for a long time
+    /// </summary>
+    Sleeping
 }
 
 public partial class PetApp : Window {
+    /// <summary>
+    /// Time in seconds before the pet falls asleep if the user has not interacted with it
+    /// </summary>
+    public const int INACTIVITY_TIMEOUT = 180;
     const double VERTICAL_ACCELERATION = 1.1d;
     const double AIR_FRICTION = 0.9d;
     const double GROUND_FRICTION = AIR_FRICTION * 3d;
@@ -48,6 +56,7 @@ public partial class PetApp : Window {
     double floorY = getScreenSize().Height;
     Stopwatch lastWalkStopwatch = new Stopwatch();
     Stopwatch lastFoodAppearStopwatch = new Stopwatch();
+    Stopwatch sleepStopwatch = new Stopwatch();
     Random rng = new Random();
     SpeechLinesParser catLines = new SpeechLinesParser("assets/SpeechLines.txt");
     SpeechLinesParser secretLines = new SpeechLinesParser("assets/SecretLines.txt");
@@ -100,8 +109,8 @@ public partial class PetApp : Window {
         timer.Start();
     }
     void physicsLoop(object? sender,EventArgs args) {
-        //physics is suspended when pet is dragged by the user
-        if (this.State == PetStates.MouseDrag) return;
+        //physics is suspended when pet is dragged by the user or sleeping 
+        if (this.State == PetStates.MouseDrag || this.State == PetStates.Sleeping) return;
         //update positions
         this.PetDecalPos.X = this.nextPosition.X;
         this.PetDecalPos.Y = this.nextPosition.Y;
@@ -114,9 +123,15 @@ public partial class PetApp : Window {
                 this.Hunger = 0;
                 this.PetDecal.Source = AssetProvider.Images.CatStarving;
             }
+            if (this.sleepStopwatch.Elapsed() > INACTIVITY_TIMEOUT) {
+                this.State = PetStates.Sleeping;
+                this.PetDecal.Source = AssetProvider.Images.CatSleep;
+                AssetProvider.Audios.SleepSound.PlayFromStart();
+                return;
+            }
             //make him go to random positions or say something random (50/50)
             if ((!this.IsTamagotchi || this.Hunger > 0) && lastWalkStopwatch.Elapsed() > rng.Next(5,9)) {
-                if (rng.NextDouble() < 0.5) {
+                if (rng.NextDouble() < 0.25) {
                     this.PromptPetSpeech(this.catLines.GetRandomLine());
                     this.lastWalkStopwatch.Reset();
                 } else {
@@ -221,18 +236,19 @@ public partial class PetApp : Window {
             this.SpeechBubbleText.FontSize = 14;
             this.hideSpeechBubbleAt = Stopwatch.Now() + 15; //prompt hides away if no user interaction
             if (this.SpeechBubble.Visibility == Visibility.Visible) return;
+            this.updateSpeechBubblePos(1);
 			this.SpeechBubble.Visibility = Visibility.Visible;
             while (Stopwatch.Now() < this.hideSpeechBubbleAt) {
-				//added arbitrary offsets cuz i kinda screwed up the center of the image
-				this.SpeechBubblePosition.X = lerp(this.SpeechBubblePosition.X,this.PetDecalPos.X - 20,0.4);
-				this.SpeechBubblePosition.Y = lerp(this.SpeechBubblePosition.Y,this.PetDecalPos.Y - this.SpeechBubble.Height + 25,0.4);
+                //added arbitrary offsets cuz i kinda screwed up the center of the image
+                this.updateSpeechBubblePos(0.4);
 				await Task.Delay(20);
 			}
             this.SpeechBubble.Visibility = Visibility.Hidden;
             this.State = PetStates.Freefall;
             return;
         }
-        this.State = PetStates.MouseDrag;
+		this.sleepStopwatch.Reset();
+		this.State = PetStates.MouseDrag;
         this.velocity = new Vector(0d,0d);
         this.isMouseInPet = false;
         this.HungerImage.Visibility = Visibility.Hidden;
@@ -330,15 +346,20 @@ public partial class PetApp : Window {
         AssetProvider.Audios.Meow.PlayFromStart();
         this.hideSpeechBubbleAt = Stopwatch.Now() + showFor;
         if (this.SpeechBubble.Visibility == Visibility.Visible) return;
+        this.updateSpeechBubblePos(1);
+        this.PetDecal.Source = AssetProvider.Images.CatSpeak;
 		this.SpeechBubble.Visibility = Visibility.Visible;
 		while (Stopwatch.Now() < this.hideSpeechBubbleAt) {
-            this.SpeechBubblePosition.X = lerp(this.SpeechBubblePosition.X,this.PetDecalPos.X - 20,0.4);
-            this.SpeechBubblePosition.Y = lerp(this.SpeechBubblePosition.Y,this.PetDecalPos.Y - this.SpeechBubble.Height + 25,0.4);
+            this.updateSpeechBubblePos(0.4);
 			await Task.Delay(20);
         }
+        this.PetDecal.Source = AssetProvider.Images.CatIdle;
 		this.SpeechBubble.Visibility = Visibility.Hidden;
 	}
-    public Vector GetPetVelocity() => this.velocity;
+    void updateSpeechBubblePos(double lerpAlpha) {
+		this.SpeechBubblePosition.X = lerp(this.SpeechBubblePosition.X,this.PetDecalPos.X - 20,lerpAlpha);
+		this.SpeechBubblePosition.Y = lerp(this.SpeechBubblePosition.Y,this.PetDecalPos.Y - this.SpeechBubble.Height + 25,lerpAlpha);
+	}
 	static Size getScreenSize() => new Size(SystemParameters.WorkArea.Width,SystemParameters.WorkArea.Height);
     static Vector getMousePosition() => new Vector(System.Windows.Forms.Cursor.Position.X,System.Windows.Forms.Cursor.Position.Y);
     static Vector lerp(Vector start, Vector end, float alpha) => start + (end - start) * alpha;
