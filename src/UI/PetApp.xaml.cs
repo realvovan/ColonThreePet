@@ -37,7 +37,7 @@ public partial class PetApp : Window {
     /// <summary>
     /// Time in seconds before the pet falls asleep if the user has not interacted with it
     /// </summary>
-    public const int INACTIVITY_TIMEOUT = 180;
+    public const int INACTIVITY_TIMEOUT = 450;
     const double VERTICAL_ACCELERATION = 1.1d;
     const double AIR_FRICTION = 0.9d;
     const double GROUND_FRICTION = AIR_FRICTION * 3d;
@@ -60,6 +60,7 @@ public partial class PetApp : Window {
     Random rng = new Random();
     SpeechLinesParser catLines = new SpeechLinesParser("assets/SpeechLines.txt");
     SpeechLinesParser secretLines = new SpeechLinesParser("assets/SecretLines.txt");
+    ImageSource catIdleImage;
     Vector velocity;
     Vector nextPosition;
     Size screenSize = getScreenSize();
@@ -70,14 +71,16 @@ public partial class PetApp : Window {
 		this.PetDecalPos.Y = rng.Next(150,300);
         this.velocity = new Vector(rng.Next(15,40),-rng.Next(10,30));
         this.nextPosition = new Vector(this.PetDecalPos.X,this.PetDecalPos.Y) + this.velocity;
-        this.PetDecal.Source = AssetProvider.Images.CatIdle;
+        //rare idling decal
+        this.catIdleImage = rng.NextDouble() < 0.07 ? AssetProvider.Images.CatSecretIdle : AssetProvider.Images.CatIdle;
+        this.PetDecal.Source = this.catIdleImage;
         this.HungerImage.Visibility = Visibility.Hidden;
         this.FoodDecal.Visibility = Visibility.Hidden;
         this.SpeechBubble.Visibility = Visibility.Hidden;
         this.IsTamagotchi = isTamagotchiMode;
 
         //rare tootie decal
-        if (rng.Next(0,100) < 94) {
+        if (rng.NextDouble() < 0.94) {
             this.Tootie.Visibility = Visibility.Hidden;
         } else {
             ((TranslateTransform)this.Tootie.RenderTransform).X = this.screenSize.Width - this.Tootie.Width;
@@ -131,7 +134,7 @@ public partial class PetApp : Window {
             }
             //make him go to random positions or say something random (50/50)
             if ((!this.IsTamagotchi || this.Hunger > 0) && lastWalkStopwatch.Elapsed() > rng.Next(5,9)) {
-                if (rng.NextDouble() < 0.25) {
+                if (rng.NextDouble() < 0.3) {
                     this.PromptPetSpeech(this.catLines.GetRandomLine());
                     this.lastWalkStopwatch.Reset();
                 } else {
@@ -146,7 +149,7 @@ public partial class PetApp : Window {
 			if (Math.Abs(this.nextPosition.X - this.gotoX) < 1d) {
                 //cat reached its destination
                 this.lastWalkStopwatch.Reset();
-                this.PetDecal.Source = this.Hunger > 0 || !this.IsTamagotchi ? AssetProvider.Images.CatIdle : AssetProvider.Images.CatStarving;
+                this.PetDecal.Source = this.Hunger > 0 || !this.IsTamagotchi ? this.catIdleImage : AssetProvider.Images.CatStarving;
                 this.PetScale.ScaleX = 1d;
                 this.State = PetStates.Idle;
 				return;
@@ -220,7 +223,7 @@ public partial class PetApp : Window {
             this.FoodDecal.Visibility = Visibility.Hidden;
         }
         this.State = lastState;
-        this.PetDecal.Source = lastState == PetStates.Navigating ? AssetProvider.Images.CatMoving : AssetProvider.Images.CatIdle;
+        this.PetDecal.Source = lastState == PetStates.Navigating ? AssetProvider.Images.CatMoving : this.catIdleImage;
 	}
 	async void petOnMouseDown(object sender,MouseButtonEventArgs args) {
         if (args.MiddleButton == MouseButtonState.Pressed) return;
@@ -253,11 +256,10 @@ public partial class PetApp : Window {
         this.isMouseInPet = false;
         this.HungerImage.Visibility = Visibility.Hidden;
         this.PetScale.ScaleX = 1d;
-		//this.PetDecal.Source = this.Hunger > 0 || !this.IsTamagotchi ? AssetProvider.Images.CatIdle : AssetProvider.Images.CatStarving;
         if (this.IsTamagotchi && this.Hunger < 1) {
             this.PetDecal.Source = AssetProvider.Images.CatStarving;
         } else if (this.PetDecal.Source != AssetProvider.Images.CatIdle2) {
-            this.PetDecal.Source = AssetProvider.Images.CatIdle;
+            this.PetDecal.Source = this.catIdleImage;
 		}
         Vector oldAbsPos;
         var clickPosOnPet = (Vector)args.GetPosition(this.PetDecal);
@@ -302,7 +304,7 @@ public partial class PetApp : Window {
 	}
 	void noQuitButtonClick(object sender,RoutedEventArgs args) {
         this.hideSpeechBubbleAt = -1;
-        this.PetDecal.Source = AssetProvider.Images.CatIdle;
+        this.PetDecal.Source = this.catIdleImage;
         this.State = PetStates.Idle;
         
 	}
@@ -347,14 +349,19 @@ public partial class PetApp : Window {
         this.hideSpeechBubbleAt = Stopwatch.Now() + showFor;
         if (this.SpeechBubble.Visibility == Visibility.Visible) return;
         this.updateSpeechBubblePos(1);
-        this.PetDecal.Source = AssetProvider.Images.CatSpeak;
+        //don't change pet image if he's sleeping or moving 
+        if (this.State == PetStates.Idle || this.State == PetStates.Freefall) this.PetDecal.Source = AssetProvider.Images.CatSpeak;
 		this.SpeechBubble.Visibility = Visibility.Visible;
 		while (Stopwatch.Now() < this.hideSpeechBubbleAt) {
             this.updateSpeechBubblePos(0.4);
 			await Task.Delay(20);
         }
-        this.PetDecal.Source = AssetProvider.Images.CatIdle;
-		this.SpeechBubble.Visibility = Visibility.Hidden;
+        this.PetDecal.Source = this.State switch {
+            PetStates.Navigating => AssetProvider.Images.CatMoving,
+            PetStates.Sleeping => AssetProvider.Images.CatSleep,
+            _ => this.catIdleImage,
+        };
+        this.SpeechBubble.Visibility = Visibility.Hidden;
 	}
     void updateSpeechBubblePos(double lerpAlpha) {
 		this.SpeechBubblePosition.X = lerp(this.SpeechBubblePosition.X,this.PetDecalPos.X - 20,lerpAlpha);

@@ -14,6 +14,7 @@ static class AssetProvider {
 		public static readonly ImageSource CatIdle2 = getImage("CatIdle2.png");
 		public static readonly ImageSource CatSpeak = getImage("CatNerd.png");
 		public static readonly ImageSource CatSleep = getImage("CatSleeping.png");
+		public static readonly ImageSource CatSecretIdle = getImage("CatAlienGoober.png");
 
 		private static ImageSource getImage(string name) => new BitmapImage(new Uri("/assets/Images/" + name,UriKind.Relative));
 	}
