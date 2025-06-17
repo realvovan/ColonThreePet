@@ -11,29 +11,42 @@
 	</Window.Background>
 	<Grid>
 		<Label Content=":3 Pet" FontSize="66" FontFamily="Franklin Gothic Heavy" HorizontalContentAlignment="Center" FontWeight="Bold" Margin="0,20,0,0"/>
-		<Button x:Name="RegularLaunch" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,120,0,0" Width="100" Height="40" Background="WhiteSmoke" BorderBrush="#FF1A1DF7" Click="StartButtonClick">
+		<Button x:Name="RegularLaunch" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,100,0,0" Width="100" Height="40" Background="WhiteSmoke" BorderBrush="#FF1A1DF7" Click="StartButtonClick">
 			<TextBlock Text="Start pet" TextWrapping="Wrap" TextAlignment="Center" FontSize="16" FontWeight="Bold"/>
 		</Button>
-		<StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="24 170 0 0">
-			<ToggleButton x:Name="DisableHungerBox" Width="20" Height="20" IsChecked="False">
-				<ToggleButton.Template>
-					<ControlTemplate TargetType="ToggleButton">
-						<Grid>
-							<Border x:Name="Border" Background="White" BorderBrush="#FFAB00FF" BorderThickness="1"/>
-							<Path x:Name="Checkmark" Data="M0,5 L5,10 L10,0" Stroke="Black" StrokeThickness="2" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-						</Grid>
-						<ControlTemplate.Triggers>
-							<Trigger Property="IsChecked" Value="true">
-								<Setter TargetName="Checkmark" Property="Visibility" Value="Visible"/>
-							</Trigger>
-							<Trigger Property="IsMouseOver" Value="true">
-								<Setter TargetName="Border" Property="Background" Value="#FFC4DDFF"/>
-							</Trigger>
-						</ControlTemplate.Triggers>
-					</ControlTemplate>
-				</ToggleButton.Template>
-			</ToggleButton>
-			<TextBlock Margin="5 0 0 0" Text="Disable hunger" FontWeight="Bold" FontSize="14"/>
+		<Button HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,144,0,0" Width="100" Height="50" Background="WhiteSmoke" BorderBrush="#FF5D1AF7" Click="ToggleSettingsClick">
+			<TextBlock Text="Toggle settings" TextWrapping="Wrap" TextAlignment="Center" FontSize="16" FontWeight="Bold"/>
+		</Button>
+		<StackPanel x:Name="SettingsPanel" Visibility="Hidden">
+			<StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="24 200 0 0">
+				<ToggleButton x:Name="DisableHungerBox" Width="20" Height="20" IsChecked="False">
+					<ToggleButton.Template>
+						<ControlTemplate TargetType="ToggleButton">
+							<Grid>
+								<Border x:Name="Border" Background="White" BorderBrush="#FFAB00FF" BorderThickness="1"/>
+								<Path x:Name="Checkmark" Data="M0,5 L5,10 L10,0" Stroke="Black" StrokeThickness="2" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+							</Grid>
+							<ControlTemplate.Triggers>
+								<Trigger Property="IsChecked" Value="true">
+									<Setter TargetName="Checkmark" Property="Visibility" Value="Visible"/>
+								</Trigger>
+								<Trigger Property="IsMouseOver" Value="true">
+									<Setter TargetName="Border" Property="Background" Value="#FFC4DDFF"/>
+								</Trigger>
+							</ControlTemplate.Triggers>
+						</ControlTemplate>
+					</ToggleButton.Template>
+				</ToggleButton>
+				<TextBlock Margin="5 0 0 0" Text="Disable hunger" FontWeight="Bold" FontSize="14"/>
+			</StackPanel>
+			<Slider x:Name="AccelerationSlider" ToolTip="Default: 1.1" Width="100" Margin="0 5 0 0" Minimum="0.1" Maximum="4.6" Value="1.1" SmallChange="0.5" LargeChange="0.5" TickPlacement="TopLeft" TickFrequency="0.5" IsSnapToTickEnabled="True"/>
+			<TextBlock Width="100" Text="{Binding ElementName=AccelerationSlider, Path=Value, StringFormat=Gravity: {0:F1}}"/>
+			<Slider x:Name="AirFrictionSlider" ToolTip="Default: 0.9" Width="100" Margin="0 5 0 0" Minimum="0.4" Maximum="4.4" Value="0.9" SmallChange="0.5" LargeChange="0.5" TickPlacement="TopLeft" TickFrequency="0.5" IsSnapToTickEnabled="True"/>
+			<TextBlock Width="100" Text="{Binding ElementName=AirFrictionSlider, Path=Value, StringFormat=Air friction: {0:F1}}"/>
+			<Slider x:Name="GroundFrictionSlider" ToolTip="Default: 2.7" Width="100" Margin="0 5 0 0" Minimum="0.9" Maximum="6.9" Value="2.7" SmallChange="0.5" LargeChange="0.5" TickPlacement="TopLeft" TickFrequency="0.5" IsSnapToTickEnabled="True"/>
+			<TextBlock Width="105" Text="{Binding ElementName=GroundFrictionSlider, Path=Value, StringFormat=Ground friction: {0:F1}}"/>
+			<Slider x:Name="ThrowForceSlider" ToolTip="Default: 1.0" Width="100" Margin="0 5 0 0" Minimum="0.2" Maximum="5" Value="1" SmallChange="0.2" LargeChange="0.2" TickPlacement="TopLeft" TickFrequency="0.2" IsSnapToTickEnabled="True"/>
+			<TextBlock Width="105" Text="{Binding ElementName=ThrowForceSlider, Path=Value, StringFormat=Throw force: {0:F1}}"/>
 		</StackPanel>
 	</Grid>
 </Window>
