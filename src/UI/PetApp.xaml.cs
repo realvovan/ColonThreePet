@@ -50,6 +50,7 @@ public partial class PetApp : Window {
     SpeechLinesParser catLines = new SpeechLinesParser("assets/SpeechLines.txt");
     SpeechLinesParser secretLines = new SpeechLinesParser("assets/SecretLines.txt");
     ImageSource catIdleImage;
+    Matrix mouseTransformMatrix;
     IKeyboardMouseEvents mouseEventHook;
     Vector velocity;
     Vector nextPosition;
@@ -99,6 +100,10 @@ public partial class PetApp : Window {
         this.mouseEventHook = Hook.GlobalEvents();
         this.mouseEventHook.MouseMove += resetInactivityTimer;
 
+        this.Loaded += (sender,args) => {
+            this.mouseTransformMatrix = PresentationSource.FromVisual(this).CompositionTarget.TransformFromDevice;
+        };
+
         var timer = new DispatcherTimer();
         timer.Interval = TimeSpan.FromSeconds(1d / 60d);
         timer.Tick += physicsLoop;
@@ -126,7 +131,11 @@ public partial class PetApp : Window {
                 return;
             }
             //make him go to random positions or say something random (50/50)
-            if ((!this.PetConfig.EnableHunger || this.Hunger > 0) && lastWalkStopwatch.Elapsed() > rng.Next(5,9)) {
+            if (
+                (!this.PetConfig.EnableHunger || this.Hunger > 0)
+                && this.SpeechBubble.Visibility != Visibility.Visible
+                && lastWalkStopwatch.Elapsed() > rng.Next(5,9)
+            ) {
                 if (rng.NextDouble() < 0.3) {
                     this.PromptPetSpeech(this.catLines.GetRandomLine());
                     this.lastWalkStopwatch.Reset();
@@ -172,7 +181,11 @@ public partial class PetApp : Window {
             if (this.velocity.X == 0d && Math.Abs(this.velocity.Y) < this.PetConfig.VerticalAcceleration) {
                 this.velocity.Y = 0d;
                 this.lastWalkStopwatch.Reset();
-                if (this.State != PetStates.Begging) this.State = PetStates.Idle;
+                if (this.State != PetStates.Begging) {
+                    this.State = PetStates.Idle;
+                    this.PetDecal.Source = this.catIdleImage;
+                    this.PetScale.ScaleX = 1d;
+                }
             }
         } else if (this.nextPosition.Y < 0d) {
             //he's touching the screen top
@@ -201,8 +214,8 @@ public partial class PetApp : Window {
         this.State = PetStates.Begging;
         this.PetDecal.Source = AssetProvider.Images.CatHungry;
         while (args.LeftButton == MouseButtonState.Pressed) {
-            Vector currentPos = new Vector(this.FoodPos.X,this.FoodPos.Y);
-            Vector nextPos = lerp(currentPos,getMousePosition() - clickPosOnFood,0.25f);
+            Point currentPos = new Point(this.FoodPos.X,this.FoodPos.Y);
+            Point nextPos = lerp(currentPos,getMousePosition() - clickPosOnFood,0.25f);
             this.FoodPos.X = nextPos.X;
             this.FoodPos.Y = nextPos.Y;
             await Task.Delay(10);
@@ -259,8 +272,9 @@ public partial class PetApp : Window {
         } else if (this.PetDecal.Source != AssetProvider.Images.CatIdle2) {
             this.PetDecal.Source = this.catIdleImage;
 		}
-        Vector oldAbsPos;
-        var clickPosOnPet = (Vector)args.GetPosition(this.PetDecal);
+        Point oldAbsPos;
+        var clickPosOnPet = args.GetPosition(this.PetDecal);
+        var startTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
         while (args.LeftButton == MouseButtonState.Pressed) {
             oldAbsPos = getMousePosition();
             this.PetRotation.Angle = 10 * Math.Sin(DateTimeOffset.Now.ToUnixTimeMilliseconds() * 0.004);
@@ -269,12 +283,21 @@ public partial class PetApp : Window {
 			this.PetDecalPos.Y = this.nextPosition.Y;
 			await Task.Delay(10);
         }
-        this.PetRotation.Angle = 0;
-        this.velocity = (getMousePosition() - oldAbsPos) * this.PetConfig.ThrowForce;
-        this.screenSize = getScreenSize();
-        this.lastWalkStopwatch.Reset();
-        this.Hunger--;
-        this.State = PetStates.Freefall;
+		this.PetRotation.Angle = 0;
+		this.screenSize = getScreenSize();
+		this.lastWalkStopwatch.Reset();
+		this.Hunger--;
+		this.State = PetStates.Freefall;
+		if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - startTime < 100) {
+            AssetProvider.Audios.HitSound.PlayFromStart();
+            bool isLeft = getMousePosition().X < this.PetDecalPos.X + this.PetDecal.Width / 2;
+			this.velocity.X = isLeft ? 8d : -8d;
+            this.velocity.Y = -10d;
+            this.PetScale.ScaleX = isLeft ? 1d : -1d;
+			this.PetDecal.Source = AssetProvider.Images.CatHit;
+		} else {
+            this.velocity = (getMousePosition() - oldAbsPos) * this.PetConfig.ThrowForce;
+        }
     }
 	async void petOnMouseIn(object sender,MouseEventArgs args) {
         if (this.State == PetStates.MouseDrag) return;
@@ -319,13 +342,13 @@ public partial class PetApp : Window {
         this.SpeechBubbleText.Text = text;
         //scale the text size
         double fontSize = 64;
+        var typeFace = new Typeface(
+            this.SpeechBubbleText.FontFamily,
+            this.SpeechBubbleText.FontStyle,
+            this.SpeechBubbleText.FontWeight,
+            this.SpeechBubbleText.FontStretch
+        );
         while (fontSize > 1) {
-            var typeFace = new Typeface(
-                this.SpeechBubbleText.FontFamily,
-                this.SpeechBubbleText.FontStyle,
-                this.SpeechBubbleText.FontWeight,
-                this.SpeechBubbleText.FontStretch
-            );
             var formattedText = new FormattedText(
                 text,
                 CultureInfo.CurrentCulture,
@@ -376,9 +399,13 @@ public partial class PetApp : Window {
 		this.SpeechBubblePosition.X = lerp(this.SpeechBubblePosition.X,this.PetDecalPos.X - 20,lerpAlpha);
 		this.SpeechBubblePosition.Y = lerp(this.SpeechBubblePosition.Y,this.PetDecalPos.Y - this.SpeechBubble.Height + 25,lerpAlpha);
 	}
+    Point getMousePosition() {
+        var winFormsMousePos = System.Windows.Forms.Control.MousePosition;
+		return this.mouseTransformMatrix.Transform(new Point(winFormsMousePos.X,winFormsMousePos.Y));
+    }
 	static Size getScreenSize() => new Size(SystemParameters.WorkArea.Width,SystemParameters.WorkArea.Height);
-    static Vector getMousePosition() => new Vector(System.Windows.Forms.Cursor.Position.X,System.Windows.Forms.Cursor.Position.Y);
     static Vector lerp(Vector start, Vector end, float alpha) => start + (end - start) * alpha;
+    static Point lerp(Point start,Point end,float alpha) => start + (end - start) * alpha;
     static double lerp(double start,double end,double alpha) => start + (end - start) * alpha;
     /// <summary>
     /// Subtracts num2 from the absolute value of num1, if abs(num1) > num2 returns clamp
