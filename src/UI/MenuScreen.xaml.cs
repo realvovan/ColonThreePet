@@ -34,8 +34,8 @@ public readonly struct PetConfig {
 }
 public partial class MenuScreen : Window {
 	bool isPetOpen = false;
-    public MenuScreen() {
-        InitializeComponent();
+	public MenuScreen() {
+		InitializeComponent();
 	}
 
 	void StartButtonClick(object sender,RoutedEventArgs args) {
