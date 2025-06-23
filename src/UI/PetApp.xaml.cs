@@ -40,6 +40,7 @@ public partial class PetApp : Window {
 	public PetConfig PetConfig { get; init; }
 
 	bool isMouseInPet = false;
+	bool isNotifiedAboutHunger = false;
 	int hideSpeechBubbleAt = -1;
 	int gotoX = -1;
 	double floorY = getScreenSize().Height;
@@ -123,6 +124,9 @@ public partial class PetApp : Window {
 			if (this.PetConfig.EnableHunger && this.Hunger < 1 && this.State != PetStates.Begging) {
 				this.Hunger = 0;
 				this.PetDecal.Source = AssetProvider.Images.CatStarving;
+			} else if (!this.isNotifiedAboutHunger && this.PetConfig.EnableHunger && this.Hunger < 31) {
+				this.isNotifiedAboutHunger = true;
+				this.PromptPetSpeech("My food bowl is empty and that is a problem :3");
 			}
 			if (this.sleepStopwatch.Elapsed() > this.PetConfig.InactivityTimeout) {
 				this.State = PetStates.Sleeping;
@@ -229,6 +233,7 @@ public partial class PetApp : Window {
 			AssetProvider.Audios.EatingSound.PlayFromStart();
 			this.Hunger = Math.Min(100,this.Hunger + rng.Next(10,35));
 			this.FoodDecal.Visibility = Visibility.Hidden;
+			this.isNotifiedAboutHunger = this.Hunger < 31;
 		}
 		this.State = lastState;
 		if (this.SpeechBubble.Visibility == Visibility.Visible) {
