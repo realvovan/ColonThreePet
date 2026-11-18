@@ -6,8 +6,10 @@ public sealed class Workspace : ServiceInstance {
 	private bool isStarted = false;
 	private readonly MainScene mainScene;
 	private readonly Application application;
-	private readonly EventHandler<PropertyChangedEventArgs> onRenderablePropertyChanged;
 	private readonly Dictionary<(object, string), Action> onRenderActionsQueue = new();
+
+	public event EventHandler<ExitEventArgs>? ApplicationExit;
+
 	internal void start() {
 		if (this.isStarted) throw new InvalidOperationException("Main scene has already been launched.");
 		this.isStarted = true;
@@ -39,6 +41,16 @@ public sealed class Workspace : ServiceInstance {
 		this.mainScene.MainCanvas.Children.Add(drawable);
 	}
 
+	private void onRenderablePropertyChanged(object? sender, PropertyChangedEventArgs args) {
+		if (args.PropertyName != "IsActive") return;
+		var renderable = (RenderComponent)sender!;
+		if (renderable.IsActive) {
+			this.DeferToRender(renderable, args.PropertyName, () => this.safeAddDrawable(renderable.GetDrawable()));
+		} else {
+			this.DeferToRender(renderable, args.PropertyName, () => this.mainScene.MainCanvas.Children.Remove(renderable.GetDrawable()));
+		}
+	}
+
 	public void DeferToRender(object owner, string key, Action action) {
 		this.onRenderActionsQueue[(owner, key)] = action;
 	}
@@ -46,20 +58,19 @@ public sealed class Workspace : ServiceInstance {
 		this.onRenderActionsQueue[(this, key)] = action;
 	}
 
+	public override void Destroy() {
+		base.Destroy();
+		this.ApplicationExit = null;
+	}
+
 	internal Workspace() : base() {
 		this.mainScene = new MainScene();
 		this.DescendantsChanged += onDescendantsChanged;
-		this.onRenderablePropertyChanged = (sender,args) => {
-			if (args.PropertyName != "IsActive") return;
-			var renderable = (RenderComponent)sender!;
-			if (renderable.IsActive) {
-				this.DeferToRender(renderable, args.PropertyName, () => this.safeAddDrawable(renderable.GetDrawable()));
-			} else {
-				this.DeferToRender(renderable, args.PropertyName, () => this.mainScene.MainCanvas.Children.Remove(renderable.GetDrawable()));
-			}
-		};
 		this.application = new Application {
 			ShutdownMode = ShutdownMode.OnMainWindowClose
+		};
+		this.application.Exit += (sender, args) => {
+			this.ApplicationExit?.Invoke(sender, args);
 		};
 	}
 }

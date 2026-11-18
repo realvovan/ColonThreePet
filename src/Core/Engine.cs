@@ -12,6 +12,11 @@ public sealed class EngineInstance : Instance {
 		if (this.isRunning) return;
 		this.isRunning = true;
 
+		this.GetService<Workspace>().ApplicationExit += (sender, args) => {
+			Console.WriteLine("Stopping services");
+			this.stopServices();
+		};
+
 		this.GetService<RunService>().start();
 		this.GetService<Workspace>().start();
 	}
@@ -30,6 +35,10 @@ public sealed class EngineInstance : Instance {
 		}
 		addService(new Workspace());
 		addService(new RunService());
+	}
+
+	private void stopServices() {
+		this.GetService<RunService>().stop();
 	}
 
 	internal EngineInstance() {
