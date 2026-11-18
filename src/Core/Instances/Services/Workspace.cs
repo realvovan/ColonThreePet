@@ -11,14 +11,14 @@ public sealed class Workspace : ServiceInstance {
 	internal void start() {
 		if (this.isStarted) throw new InvalidOperationException("Main scene has already been launched.");
 		this.isStarted = true;
-		Engine.GetService<RunService>().Render += dt => {
+		Engine.GetService<RunService>().Render.Subscribe(dt => {
 			lock (this.onRenderActionsQueue) {
 				foreach (KeyValuePair<(object, string), Action> kv in this.onRenderActionsQueue) {
 					kv.Value.Invoke();
 				}
 				this.onRenderActionsQueue.Clear();
 			}
-		};
+		});
 		this.application.Run(this.mainScene);
 	}
 
