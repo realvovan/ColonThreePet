@@ -1,5 +1,10 @@
 ﻿namespace ColonThreePet.Core.Events;
 
+/// <summary>
+/// An object that runs connected callbacks upon a specific occurance.
+/// An exception inside a callback will not propagate and stop the program.
+/// </summary>
+/// <typeparam name="TDelegate">Signature of the callback</typeparam>
 public abstract class SafeEventBase<TDelegate> where TDelegate : Delegate {
 	private class Entry(TDelegate handler, bool once) {
 		public readonly TDelegate Handler = handler;

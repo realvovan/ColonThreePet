@@ -1,13 +1,22 @@
+using ColonThreePet.Core.Exceptions;
 using ColonThreePet.Core.Instances;
 
 namespace ColonThreePet.Core;
 
+/// <summary>
+/// The root of the project's parent-child hierarchy. Its direnct children are <see cref="ServiceInstance"/>s,
+/// that act as the fundamental components of any project.
+/// </summary>
 public sealed class EngineInstance : Instance {
 	private bool isRunning = false;
 	private Dictionary<Type,ServiceInstance> services = new();
 
 	protected override bool isParentLocked => true;
 
+	/// <summary>
+	/// Starts all the services including physics simulation and rendering.
+	/// It should only be called once inside your project.
+	/// </summary>
 	public void Start() {
 		if (this.isRunning) return;
 		this.isRunning = true;
@@ -21,9 +30,14 @@ public sealed class EngineInstance : Instance {
 		this.GetService<Workspace>().start();
 	}
 
+	/// <summary>
+	/// Returns a service of a specifed type.
+	///<br/>Throws <see cref="ServiceNotFoundException"/> if a specifed service does not exist
+	/// </summary>
+	/// <exception cref="ServiceNotFoundException"/>
 	public T GetService<T>() where T : ServiceInstance {
 		if (!this.services.TryGetValue(typeof(T), out var service)) {
-			throw new InvalidOperationException($"Service of type {typeof(T).Name} does not exist.");
+			throw new ServiceNotFoundException(typeof(T));
 		}
 		return (T)service;
 	}

@@ -2,12 +2,18 @@
 using System.Windows;
 
 namespace ColonThreePet.Core.Instances;
+
+/// <summary>
+/// Holds all the objects that are meant to be rendered onto the screen.
+/// Objects not descending from it will not be rendered or physically interect with the scene.
+/// </summary>
 public sealed class Workspace : ServiceInstance {
 	private bool isStarted = false;
 	private readonly MainScene mainScene;
 	private readonly Application application;
 	private readonly Dictionary<(object, string), Action> onRenderActionsQueue = new();
 
+	/// <inheritdoc cref="Application.Exit"/>
 	public event EventHandler<ExitEventArgs>? ApplicationExit;
 
 	internal void start() {
@@ -51,9 +57,24 @@ public sealed class Workspace : ServiceInstance {
 		}
 	}
 
+	/// <summary>
+	/// Defers the execution of an action to the next rendered frame.
+	/// Ideal when you need to make changes to WPF's <see cref="UIElement"/> from a different thread.
+	/// In most cases you do not need to use this method to make changes to <see cref="Instance"/> properties,
+	/// unless you have a specific reason to do so.
+	///<br/> When a new call with the same <paramref name="owner"/> and <paramref name="key"/> within the same frame is made,
+	/// any older calls with this <paramref name="owner"/> and <paramref name="key"/> are ignored.
+	/// </summary>
+	/// <param name="owner">
+	///		Owner of the defer request. Different owners may have requests with the same <paramref name="key"/>.
+	///		If this parameter is omitted, the owner is set to <see cref="Workspace"/>
+	/// </param>
+	/// <param name="key">String key of the defer request</param>
+	/// <param name="action">The action to be executed next frame during rendering</param>
 	public void DeferToRender(object owner, string key, Action action) {
 		this.onRenderActionsQueue[(owner, key)] = action;
 	}
+	/// <inheritdoc cref="Workspace.DeferToRender(object, string, Action)"/>
 	public void DeferToRender(string key, Action action) {
 		this.onRenderActionsQueue[(this, key)] = action;
 	}

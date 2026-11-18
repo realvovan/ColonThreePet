@@ -3,6 +3,10 @@ using ColonThreePet.Core.Events;
 using System.Runtime.CompilerServices;
 
 namespace ColonThreePet.Core.Instances;
+
+/// <summary>
+/// The base class for all classes in the parent-child hiararchy.
+/// </summary>
 public abstract class Instance {
 	// property fields
 	private Instance? parent;
@@ -10,15 +14,27 @@ public abstract class Instance {
 	//
 
 	private bool isDestroyed = false;
+	/// key: Instance.Name, value: bucket of instances
 	private Dictionary<string,LinkedList<Instance>> children = new();
 
+	/// <summary>
+	/// Fires whenever any property gets assigned a new value.
+	/// The name of the changed property is provided in <see cref="PropertyChangedEventArgs.PropertyName"/>
+	/// </summary>
 	public event EventHandler<PropertyChangedEventArgs>? PropertyChanged;
+	/// <summary>
+	/// Fires after a descendant is either added or removed.
+	/// Propagates to all descendants, not just the direct children.
+	/// </summary>
 	public event EventHandler<DescendantChangedArgs> DescendantsChanged = static (sender,args) => {
 		// recursively propagate the event to all ancestors
 		if (sender is Instance instance && instance.Parent is not null) {
 			instance.Parent.DescendantsChanged.Invoke(instance.Parent,args);
 		}
 	};
+	/// <summary>
+	/// Fires when the <see cref="Instance.Parent"/> property of this object or any of its ancestors is changed.
+	/// </summary>
 	public event EventHandler<AncestryChangedArgs> AncestryChanged = static (sender,args) => {
 		// recursively propagate the event to all descendants
 		if (sender is Instance instance) {
@@ -37,6 +53,9 @@ public abstract class Instance {
 		}
 	}
 
+	/// <summary>
+	/// Determines the hierarchical parent of the <see cref="Instance"/>.
+	/// </summary>
 	public Instance Parent {
 		get => this.parent!;
 		set {
@@ -55,14 +74,25 @@ public abstract class Instance {
 			this.forceSetParent(value);
 		}
 	}
+	/// <summary>
+	/// A non-unique identifier of the <see cref="Instance"/>
+	/// </summary>
 	public string Name {
 		get => this.name;
 		set => this.setPropertyAndNotify(ref this.name, value);
 	}
 	protected virtual bool isParentLocked => false;
 
+	/// <summary>
+	/// Called after the direnct parent of the <see cref="Instance"/> is changed.
+	/// Child classes may override this method to implement some functionality instead of using <see cref="Instance.AncestryChanged"/>
+	/// </summary>
 	protected virtual void onParentChange(Instance? oldParent) { }
 
+	/// <summary>
+	/// Sets the <see cref="Instance.Parent"/> property to <c>null</c>, locks the <see cref="Instance.Parent"/> property,
+	/// disconnects all events, and calls <c>Destroy()</c> on all children.
+	/// </summary>
 	public virtual void Destroy() {
 		if (this.isDestroyed) return;
 		this.isDestroyed = true;
@@ -74,6 +104,10 @@ public abstract class Instance {
 		this.AncestryChanged = null!;
 	}
 
+	/// <summary>
+	/// Returns the first child of the <see cref="Instance"/> with a given name, or null if no instance is found.
+	/// </summary>
+	/// <param name="name"><see cref="Instance.Name"/> to be searched for</param>
 	public Instance? FindFirstChild(string name) {
 		if (this.children.TryGetValue(name, out var bucket)) {
 			return bucket.First?.Value;
@@ -81,6 +115,9 @@ public abstract class Instance {
 		return null;
 	}
 
+	/// <summary>
+	/// Returns <c>true</c> if the <see cref="Instance"/> is an ancestor of the given descendant.
+	/// </summary>
 	public bool IsAncestorOf(Instance ancestor) {
 		var parent = this.Parent;
 		while (parent is not null) {
@@ -90,6 +127,9 @@ public abstract class Instance {
 		return false;
 	}
 
+	/// <summary>
+	/// Loops over all the children of the <see cref="Instance"/> and executes a provided <see cref="Action"/>
+	/// </summary>
 	public void ForEachChild(Action<Instance> action) {
 		foreach (var bucket in this.children.Values) {
 			var child = bucket.First;
@@ -100,6 +140,10 @@ public abstract class Instance {
 		}
 	}
 
+	/// <summary>
+	/// Sets the parent of the <see cref="Instance"/> bypassing all validations.
+	/// It is preferable to directly set <see cref="Instance.Parent"/> over this method
+	/// </summary>
 	internal void forceSetParent(Instance? parent) {
 		// If the parent is the same, do nothing
 		if (this.parent == parent) return;

@@ -5,12 +5,21 @@ using System.Windows.Media;
 
 namespace ColonThreePet.Core.Instances;
 
-public class RunService : ServiceInstance {
+/// <summary>
+/// Service responsible for runtime activies
+/// </summary>
+public sealed class RunService : ServiceInstance {
 	private TimeSpan lastRenderTime;
 	private Thread? physicsThread;
 	private CancellationTokenSource? physicsCts;
 
+	/// <summary>
+	/// Fires after every physics simulation step
+	/// </summary>
 	public SafeEvent<double> Heartbeat { get; } = new();
+	/// <summary>
+	/// Fires just before objects are rendered
+	/// </summary>
 	public SafeEvent<double> Render { get; } = new();
 
 	internal void start() {
