@@ -1,9 +1,14 @@
-﻿using ColonThreePet.Core.Events;
-using ColonThreePet.Core.RunServiceUtils;
+﻿using ColonThreePet.Core.RunServiceUtils;
 using System.Diagnostics;
 using System.Windows.Media;
 
 namespace ColonThreePet.Core.Instances;
+
+/// <summary>
+/// Encapsulates a method that runs every frame
+/// </summary>
+/// <param name="dt">Time between the previous and current frames (delta time)</param>
+public delegate void Tick(double dt);
 
 /// <summary>
 /// Service responsible for runtime activies
@@ -16,11 +21,11 @@ public sealed class RunService : ServiceInstance {
 	/// <summary>
 	/// Fires after every physics simulation step
 	/// </summary>
-	public SafeEvent<double> Heartbeat { get; } = new();
+	public event Tick? Heartbeat;
 	/// <summary>
 	/// Fires just before objects are rendered
 	/// </summary>
-	public SafeEvent<double> Render { get; } = new();
+	public event Tick? Render;
 
 	internal void start() {
 		if (this.physicsThread is not null) return;
@@ -44,8 +49,8 @@ public sealed class RunService : ServiceInstance {
 		this.physicsThread = null;
 		this.physicsCts = null;
 
-		this.Heartbeat.Clear();
-		this.Render.Clear();
+		this.Heartbeat = null;
+		this.Render = null;
 	}
 
 	private void onRender(object? sender, EventArgs args) {
@@ -58,7 +63,12 @@ public sealed class RunService : ServiceInstance {
 		double dt = (e.RenderingTime - lastRenderTime).TotalSeconds;
 		lastRenderTime = e.RenderingTime;
 
-		this.Render.Invoke(dt);
+		try {
+			this.Render?.Invoke(dt);
+		} catch (Exception ex) {
+			// TODO add proper error handling
+			Console.WriteLine(ex.Message);
+		}
 	}
 
 	private void runPhysics(CancellationToken ct) {
@@ -68,7 +78,14 @@ public sealed class RunService : ServiceInstance {
 
 		double loop() {
 			const double STEP = 1d / 60d;
-			this.Heartbeat.Invoke(STEP);
+
+			try {
+				this.Heartbeat?.Invoke(STEP);
+			} catch (Exception ex) {
+				// TODO add proper error handling
+				Console.WriteLine(ex.Message);
+			}
+			
 			next += STEP;
 			double now = sw.Elapsed.TotalSeconds;
 			if (now - next > 0.25) {
