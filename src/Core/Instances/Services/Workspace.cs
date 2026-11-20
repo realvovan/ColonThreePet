@@ -27,7 +27,18 @@ public sealed class Workspace : ServiceInstance {
 				this.onRenderActionsQueue.Clear();
 			}
 		};
+		Engine.GetService<RunService>().Heartbeat += dt => {
+			PhysicsComponent.stepWorld(dt);
+		};
+
+		if (!disableWpf) {
+			this.application.MainWindow = this.mainScene;
 		this.application.Run(this.mainScene);
+	}
+	}
+
+	internal void stop() {
+		this.application.Dispatcher.Invoke(this.application.Shutdown);
 	}
 
 	private void onDescendantsChanged(object? sender, DescendantChangedArgs args) {

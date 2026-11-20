@@ -17,17 +17,27 @@ public sealed class EngineInstance : Instance {
 	/// Starts all the services including physics simulation and rendering.
 	/// It should only be called once inside your project.
 	/// </summary>
-	public void Start() {
+	public void Start(bool disableWpf = false) {
 		if (this.isRunning) return;
 		this.isRunning = true;
 
 		this.GetService<Workspace>().ApplicationExit += (sender, args) => {
-			Console.WriteLine("Stopping services");
-			this.stopServices();
+			this.Stop();
 		};
 
 		this.GetService<RunService>().start();
-		this.GetService<Workspace>().start();
+		this.GetService<Workspace>().start(disableWpf);
+	}
+
+	/// <summary>
+	/// Stops all of the services
+	/// </summary>
+	public void Stop() {
+		if (!this.isRunning) return;
+		this.isRunning = false;
+		this.GetService<RunService>().stop();
+		this.GetService<Workspace>().stop();
+		Console.WriteLine("Stopped services");
 	}
 
 	/// <summary>
@@ -49,10 +59,6 @@ public sealed class EngineInstance : Instance {
 		}
 		addService(new Workspace());
 		addService(new RunService());
-	}
-
-	private void stopServices() {
-		this.GetService<RunService>().stop();
 	}
 
 	internal EngineInstance() {
