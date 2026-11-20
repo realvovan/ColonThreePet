@@ -8,21 +8,45 @@ namespace ColonThreePet.Core.Instances;
 /// Objects not descending from it will not be rendered or physically interect with the scene.
 /// </summary>
 public sealed class Workspace : ServiceInstance {
+	// property fields
+	private double gravity = 500d, airDrag = 1.5d, bounceThreshold = 5d;
+	//
+
 	private bool isStarted = false;
 	private readonly MainScene mainScene;
 	private readonly Application application;
 	private readonly Dictionary<(object, string), Action> onRenderActionsQueue = new();
+	private readonly List<PhysicsComponent> physicsComponentsIndex = new();
 
 	/// <inheritdoc cref="Application.Exit"/>
 	public event EventHandler<ExitEventArgs>? ApplicationExit;
 
-	internal void start() {
+	public double Gravity {
+		get => this.gravity;
+		set => this.setPropertyAndNotify(ref this.gravity, value);
+	}
+
+	public double AirDrag {
+		get => this.airDrag;
+		set => this.setPropertyAndNotify(ref this.airDrag, value);
+	}
+
+	public double BounceThreshold {
+		get => this.bounceThreshold;
+		set => this.setPropertyAndNotify(ref this.bounceThreshold, value);
+	}
+
+	// technically isnt safe since you can cast it to a list
+	// but i dont want to reallocate it on every read
+	internal IReadOnlyList<PhysicsComponent> PhysicsComponentsIndex => this.physicsComponentsIndex;
+
+	internal void start(bool disableWpf) {
 		if (this.isStarted) throw new InvalidOperationException("Main scene has already been launched.");
 		this.isStarted = true;
 		Engine.GetService<RunService>().Render += dt => {
 			lock (this.onRenderActionsQueue) {
-				foreach (KeyValuePair<(object, string), Action> kv in this.onRenderActionsQueue) {
-					kv.Value.Invoke();
+				foreach (Action i in this.onRenderActionsQueue.Values) {
+					i.Invoke();
 				}
 				this.onRenderActionsQueue.Clear();
 			}
@@ -33,8 +57,8 @@ public sealed class Workspace : ServiceInstance {
 
 		if (!disableWpf) {
 			this.application.MainWindow = this.mainScene;
-		this.application.Run(this.mainScene);
-	}
+			this.application.Run(this.mainScene);
+		}
 	}
 
 	internal void stop() {
@@ -49,6 +73,12 @@ public sealed class Workspace : ServiceInstance {
 			} else {
 				renderable.PropertyChanged -= this.onRenderablePropertyChanged;
 				this.DeferToRender(renderable, nameof(renderable.IsActive), () => this.mainScene.MainCanvas.Children.Remove(renderable.GetDrawable()));
+			}
+		} else if (args.Descendant is PhysicsComponent pc) {
+			if (args.TypeOfChange == DescendantChangedArgs.ChangeType.Added) {
+				this.physicsComponentsIndex.Add(pc);
+			} else {
+				this.physicsComponentsIndex.Remove(pc);
 			}
 		}
 	}

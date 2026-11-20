@@ -74,26 +74,26 @@ public sealed class RunService : ServiceInstance {
 	private void runPhysics(CancellationToken ct) {
 		using var timer = new HighResTimer();
 		var sw = Stopwatch.StartNew();
-		double next = sw.Elapsed.TotalSeconds;
+		double last = sw.Elapsed.TotalSeconds;;
+		double accumulator = 0d;
 
 		double loop() {
 			const double STEP = 1d / 60d;
+			double now = sw.Elapsed.TotalSeconds;
+			accumulator += System.Math.Min(now - last, 0.25);
+			last = now;
 
-			try {
-				this.Heartbeat?.Invoke(STEP);
-			} catch (Exception ex) {
-				// TODO add proper error handling
-				Console.WriteLine(ex.Message);
+			while (accumulator >= STEP) {
+				try {
+					this.Heartbeat?.Invoke(STEP);
+				} catch (Exception ex) {
+					// TODO add proper error handling
+					Console.WriteLine(ex.Message);
+				}
+				accumulator -= STEP;
 			}
 			
-			next += STEP;
-			double now = sw.Elapsed.TotalSeconds;
-			if (now - next > 0.25) {
-				// fell far behind, resync
-				next = now;
-				return -1d;
-			}
-			return next - now;
+			return STEP - accumulator;
 		}
 
 		if (timer.IsAvailable) {

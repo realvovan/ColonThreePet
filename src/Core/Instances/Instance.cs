@@ -140,6 +140,30 @@ public abstract class Instance {
 		}
 	}
 
+	public IList<Instance> GetChildren() {
+		var children = new List<Instance>();
+		foreach (var bucket in this.children.Values) {
+			var child = bucket.First;
+			while (child is not null) {
+				children.Add(child.Value);
+				child = child.Next;
+			}
+		}
+		return children;
+	}
+
+	public IList<T> GetChildrenOfType<T>() where T : Instance {
+		var children = new List<T>();
+		foreach (var bucket in this.children.Values) {
+			var child = bucket.First;
+			while (child is not null) {
+				if (child.Value is T t) children.Add(t);
+				child = child.Next;
+			}
+		}
+		return children;
+	}
+
 	/// <summary>
 	/// Sets the parent of the <see cref="Instance"/> bypassing all validations.
 	/// It is preferable to directly set <see cref="Instance.Parent"/> over this method
