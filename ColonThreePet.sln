@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "src\Core\Core.cspro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KittyPet", "src\KittyPet\KittyPet.csproj", "{732BA223-B03E-EAE1-A430-748B21A7016C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "tests\Tests.csproj", "{56A40B17-C5C4-4491-9F63-59F564B6A3F4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{732BA223-B03E-EAE1-A430-748B21A7016C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{732BA223-B03E-EAE1-A430-748B21A7016C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{732BA223-B03E-EAE1-A430-748B21A7016C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56A40B17-C5C4-4491-9F63-59F564B6A3F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56A40B17-C5C4-4491-9F63-59F564B6A3F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56A40B17-C5C4-4491-9F63-59F564B6A3F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56A40B17-C5C4-4491-9F63-59F564B6A3F4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
